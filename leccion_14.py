@@ -3,7 +3,8 @@ import anthropic
 
 client = anthropic.Anthropic()
 
-acciones = ["AAPL", "MSFT", "NVDA", "TSLA"]
+acciones = ["AAPL", "MSFT", "NVDA", "TSLA", "AMZN", "GOOGL", "META", 
+            "JPM", "V", "JNJ", "WMT", "PG", "XOM", "DIS", "NFLX", "ADBE"]
 
 for ticker in acciones:
     empresa = yf.Ticker(ticker)
