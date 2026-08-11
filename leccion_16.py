@@ -25,7 +25,7 @@ for ticker in acciones:
     
     print(f"\n{ticker}: Precio ${precio_hoy:.2f} | Cambio {cambio:.2f}% | Media ${media_movil_50:.2f}")
     
-    if cambio < -5 and precio_hoy > media_movil_50:
+    if cambio < 100 and precio_hoy > 0:
         print(f"  ⚠️ {ticker} ES CANDIDATO - preguntando a Claude...")
         
         mensaje_claude = client_claude.messages.create(
