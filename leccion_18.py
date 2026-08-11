@@ -26,7 +26,7 @@ for ticker in acciones:
     
     print(f"\n{ticker}: Precio ${precio_hoy:.2f} | Cambio {cambio:.2f}% | Media ${media_movil_50:.2f}")
     
-    if cambio < 100 and precio_hoy > 0:
+    if cambio < -5 and precio_hoy > media_movil_50:
         print(f"  ⚠️ {ticker} ES CANDIDATO - preguntando a Claude...")
         
         mensaje_claude = client_claude.messages.create(
@@ -36,20 +36,26 @@ for ticker in acciones:
                 {
                     "role": "user",
                     "content": f"""
-                    Analiza este setup de trading:
-                    
+                    Analiza este setup de trading. Responde en texto plano sencillo, 
+                    sin usar Markdown (no uses #, ##, **, tablas, ni emojis de círculos de colores):
+
                     Acción: {ticker}
                     Precio actual: ${precio_hoy:.2f}
                     Cambio en 7 días: {cambio:.2f}%
                     Media móvil 50 días: ${media_movil_50:.2f}
-                    
+
                     ¿Es buena oportunidad de compra a corto plazo (2-3 semanas)?
                     """
                 }
             ]
         )
         
-        analisis = mensaje_claude.content[0].text
+        analisis = None
+        for bloque in mensaje_claude.content:
+            if bloque.type == "text":
+                analisis = bloque.text
+                break
+        
         print(f"  Claude dice: {analisis}")
         
         correo = MIMEText(f"{ticker}\n\n{analisis}")
