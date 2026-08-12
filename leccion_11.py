@@ -19,7 +19,7 @@ for ticker in acciones:
         
         cambio = ((precio_actual - precio_hace_7_dias) / precio_hace_7_dias) * 100
         
-        if cambio < -3 and precio_actual > media_ese_dia:
+        if cambio < -8 and precio_actual > media_ese_dia:
             precio_futuro = precios.iloc[i + 15]
             cambio_futuro = ((precio_futuro - precio_actual) / precio_actual) * 100
             resultados_totales.append(cambio_futuro)
