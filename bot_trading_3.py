@@ -63,7 +63,7 @@ for ticker in tickers:
         perdida = -delta.where(delta < 0, 0).rolling(14).mean()
         rsi = (100 - (100 / (1 + ganancia / perdida))).iloc[-1]
 
-        minimo_6m = precios.tail(126).min()
+        minimo_3m = precios.tail(63).min()
         dist_minimo = ((precio_hoy - minimo_6m) / minimo_6m) * 100
 
         dias_earnings = "?"
@@ -106,6 +106,20 @@ print(f"\nCandidatos: {len(candidatos)}\n")
 
 with open(ARCHIVO_HISTORIAL, "w") as f:
     json.dump({c["ticker"]: c["primera_vez"] for c in candidatos}, f)
+    contexto_completo = {
+    c["ticker"]: {
+        "fecha": HOY.isoformat(),
+        "precio": c["precio"],
+        "sl": c["sl"],
+        "tp": c["tp"],
+        "atr": c["atr"],
+        "confianza": c["confianza"],
+        "analisis_completo": c["analisis"],
+    }
+    for c in candidatos
+}
+with open("ultimo_analisis.json", "w", encoding="utf-8") as f:
+    json.dump(contexto_completo, f, ensure_ascii=False)
 
 if not candidatos:
     print("Sin candidatos hoy. No se envia correo.")
@@ -120,7 +134,7 @@ for c in candidatos:
     try:
         with client_claude.messages.stream(
             model=MODELO,
-            max_tokens=1500,
+            max_tokens=5000,
             tools=[{"type": "web_search_20250305", "name": "web_search"}],
             messages=[{
                 "role": "user",
@@ -142,6 +156,7 @@ CONFIANZA: (numero del 0 al 100, solo el numero)
 URGENCIA: HOY / ESTA SEMANA / SIN PRISA
 CAUSA: (por que cayo segun noticias, y si es temporal o estructural, 2 lineas max)
 CONFIRMACION_TECNICA: (el RSI indica sobreventa real o todavia no? esta cerca de un soporte solido -poco espacio a la baja- o todavia hay espacio para seguir cayendo? 2 lineas max)
+TESIS: (en una frase: especificamente por que esperarias que rebote pronto,o por que no — conectando la razon de la caida con la situacion tecnica)
 RIESGO: (earnings o dividendo cercano si aplica, 1 linea)
 NIVELES: (si el stop y target tienen sentido o los ajustarias, 1 linea)
 """
