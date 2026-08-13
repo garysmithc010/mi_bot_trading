@@ -59,12 +59,14 @@ for ticker in tickers:
         atr = df[['HL', 'HC', 'LC']].max(axis=1).rolling(14).mean().iloc[-1]
 
         delta = precios.diff()
-        ganancia = delta.where(delta > 0, 0).rolling(14).mean()
-        perdida = -delta.where(delta < 0, 0).rolling(14).mean()
-        rsi = (100 - (100 / (1 + ganancia / perdida))).iloc[-1]
+        ganancia = delta.where(delta > 0, 0)
+        perdida = -delta.where(delta < 0, 0)
+        avg_ganancia = ganancia.ewm(alpha=1/14, min_periods=14, adjust=False).mean()
+        avg_perdida = perdida.ewm(alpha=1/14, min_periods=14, adjust=False).mean()
+        rsi = (100 - (100 / (1 + avg_ganancia / avg_perdida))).iloc[-1]
 
         minimo_3m = precios.tail(63).min()
-        dist_minimo = ((precio_hoy - minimo_6m) / minimo_6m) * 100
+        dist_minimo = ((precio_hoy - minimo_3m) / minimo_3m) * 100
 
         dias_earnings = "?"
         dias_dividendo = "?"
@@ -106,20 +108,6 @@ print(f"\nCandidatos: {len(candidatos)}\n")
 
 with open(ARCHIVO_HISTORIAL, "w") as f:
     json.dump({c["ticker"]: c["primera_vez"] for c in candidatos}, f)
-    contexto_completo = {
-    c["ticker"]: {
-        "fecha": HOY.isoformat(),
-        "precio": c["precio"],
-        "sl": c["sl"],
-        "tp": c["tp"],
-        "atr": c["atr"],
-        "confianza": c["confianza"],
-        "analisis_completo": c["analisis"],
-    }
-    for c in candidatos
-}
-with open("ultimo_analisis.json", "w", encoding="utf-8") as f:
-    json.dump(contexto_completo, f, ensure_ascii=False)
 
 if not candidatos:
     print("Sin candidatos hoy. No se envia correo.")
@@ -134,7 +122,7 @@ for c in candidatos:
     try:
         with client_claude.messages.stream(
             model=MODELO,
-            max_tokens=5000,
+            max_tokens=1500,
             tools=[{"type": "web_search_20250305", "name": "web_search"}],
             messages=[{
                 "role": "user",
@@ -143,7 +131,7 @@ Busca noticias recientes de {c['ticker']} (ultima semana) antes de responder.
 
 Datos:
 Precio ${c['precio']:.2f} | Cambio 7d {c['cambio']:.2f}% | Media 50d ${c['media']:.2f}
-RSI (14): {c['rsi']:.0f} | Distancia a minimo de 6 meses: {c['dist_minimo']:.1f}%
+RSI (14): {c['rsi']:.0f} | Distancia a minimo de 3 meses: {c['dist_minimo']:.1f}%
 ATR ${c['atr']:.2f} | Stop ${c['sl']:.2f} | Target ${c['tp']:.2f}
 Earnings en {c['earnings']} dias | Ex-dividendo en {c['dividendo']} dias
 Lleva {c['dias']} dias como candidato
@@ -156,7 +144,7 @@ CONFIANZA: (numero del 0 al 100, solo el numero)
 URGENCIA: HOY / ESTA SEMANA / SIN PRISA
 CAUSA: (por que cayo segun noticias, y si es temporal o estructural, 2 lineas max)
 CONFIRMACION_TECNICA: (el RSI indica sobreventa real o todavia no? esta cerca de un soporte solido -poco espacio a la baja- o todavia hay espacio para seguir cayendo? 2 lineas max)
-TESIS: (en una frase: especificamente por que esperarias que rebote pronto,o por que no — conectando la razon de la caida con la situacion tecnica)
+TESIS: (en una frase: especificamente por que esperarias que rebote pronto, o por que no, conectando la razon de la caida con la situacion tecnica)
 RIESGO: (earnings o dividendo cercano si aplica, 1 linea)
 NIVELES: (si el stop y target tienen sentido o los ajustarias, 1 linea)
 """
@@ -169,6 +157,21 @@ NIVELES: (si el stop y target tienen sentido o los ajustarias, 1 linea)
 
     c["confianza"] = confianza_de(c["analisis"])
 
+contexto_completo = {
+    c["ticker"]: {
+        "fecha": HOY.isoformat(),
+        "precio": c["precio"],
+        "sl": c["sl"],
+        "tp": c["tp"],
+        "atr": c["atr"],
+        "confianza": c["confianza"],
+        "analisis_completo": c["analisis"],
+    }
+    for c in candidatos
+}
+with open("ultimo_analisis.json", "w", encoding="utf-8") as f:
+    json.dump(contexto_completo, f, ensure_ascii=False)
+
 candidatos.sort(key=lambda x: x["confianza"], reverse=True)
 
 reporte = f"BOT TRADING - {HOY}\n{len(candidatos)} candidatos, ordenados por confianza\n"
@@ -177,7 +180,7 @@ reporte += "=" * 55 + "\n\n"
 for i, c in enumerate(candidatos, 1):
     reporte += f"#{i}  {c['ticker']}  |  confianza {c['confianza']}\n"
     reporte += f"${c['precio']:.2f} | {c['cambio']:.2f}% en 7d | RSI {c['rsi']:.0f} | dia {c['dias']} como candidato\n"
-    reporte += f"Stop ${c['sl']:.2f} | Target ${c['tp']:.2f} | ATR ${c['atr']:.2f} | {c['dist_minimo']:.1f}% sobre min 6m\n"
+    reporte += f"Stop ${c['sl']:.2f} | Target ${c['tp']:.2f} | ATR ${c['atr']:.2f} | {c['dist_minimo']:.1f}% sobre min 3m\n"
     reporte += f"Earnings en {c['earnings']} | Ex-dividendo en {c['dividendo']}\n\n"
     reporte += c["analisis"] + "\n"
     reporte += "-" * 55 + "\n\n"
