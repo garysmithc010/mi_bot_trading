@@ -77,6 +77,11 @@ for ticker in tickers:
         except Exception:
             pass
 
+        if isinstance(dias_earnings, int) and dias_earnings < 0:
+            dias_earnings = "ya paso"
+        if isinstance(dias_dividendo, int) and dias_dividendo < 0:
+            dias_dividendo = "ya paso"
+
         primera_vez = historial.get(ticker, HOY.isoformat())
         dias_como_candidato = (HOY - date.fromisoformat(primera_vez)).days + 1
 
@@ -116,9 +121,9 @@ def confianza_de(texto):
 for c in candidatos:
     print(f"Analizando {c['ticker']}...")
     try:
-        msg = client_claude.messages.create(
+        with client_claude.messages.stream(
             model=MODELO,
-            max_tokens=50000,
+            max_tokens=800,
             tools=[{"type": "web_search_20250305", "name": "web_search"}],
             messages=[{
                 "role": "user",
@@ -142,7 +147,8 @@ RIESGO: (earnings o dividendo cercano si aplica, 1 linea)
 NIVELES: (si el stop y target tienen sentido o los ajustarias, 1 linea)
 """
             }]
-        )
+        ) as stream:
+            msg = stream.get_final_message()
         c["analisis"] = "".join(b.text for b in msg.content if b.type == "text")
     except Exception as e:
         c["analisis"] = f"CONFIANZA: 0\n(Error: {e})"
@@ -160,7 +166,7 @@ for i, c in enumerate(candidatos, 1):
     reporte += f"#{i}  {c['ticker']}  |  confianza {c['confianza']}\n"
     reporte += f"${c['precio']:.2f} | {c['cambio']:.2f}% en 7d | dia {c['dias']} como candidato\n"
     reporte += f"Stop ${c['sl']:.2f} | Target ${c['tp']:.2f} | ATR ${c['atr']:.2f}\n"
-    reporte += f"Earnings en {c['earnings']}d | Ex-dividendo en {c['dividendo']}d\n\n"
+    reporte += f"Earnings en {c['earnings']} | Ex-dividendo en {c['dividendo']}\n\n"
     reporte += c["analisis"] + "\n"
     reporte += "-" * 55 + "\n\n"
 
