@@ -59,8 +59,13 @@ for ticker in tickers:
 
         dias_earnings = "?"
         dias_dividendo = "?"
+        market_cap = "?"
+        sector = "?"
+        pe_ratio = "?"
+        dist_52w_high = "?"
         try:
-            cal = yf.Ticker(ticker).calendar
+            t = yf.Ticker(ticker)
+            cal = t.calendar
             if cal:
                 if "Earnings Date" in cal:
                     e = cal["Earnings Date"]
@@ -70,6 +75,16 @@ for ticker in tickers:
                     d = cal["Ex-Dividend Date"]
                     d = d[0] if isinstance(d, list) else d
                     dias_dividendo = (d - HOY).days
+
+            info = t.info
+            if info.get("marketCap"):
+                market_cap = f"${info['marketCap']/1e9:.1f}B"
+            if info.get("sector"):
+                sector = info["sector"]
+            if info.get("trailingPE"):
+                pe_ratio = f"{info['trailingPE']:.1f}"
+            if info.get("fiftyTwoWeekHigh"):
+                dist_52w_high = ((precio_hoy - info["fiftyTwoWeekHigh"]) / info["fiftyTwoWeekHigh"]) * 100
         except Exception:
             pass
 
@@ -87,6 +102,7 @@ for ticker in tickers:
             "sl": precio_hoy - (1 * atr), "tp": precio_hoy + (1.5 * atr),
             "earnings": dias_earnings, "dividendo": dias_dividendo,
             "dias": dias_como_candidato, "primera_vez": primera_vez,
+            "market_cap": market_cap, "sector": sector, "pe": pe_ratio, "dist_52w": dist_52w_high,
         })
 
     except Exception:
@@ -98,10 +114,12 @@ with open(ARCHIVO_HISTORIAL, "w") as f:
 print(f"\n{len(candidatos)} CANDIDATOS — copia todo esto y pegalo en el chat con Claude:\n")
 print("=" * 60)
 for c in candidatos:
+    dist_52w_txt = f"{c['dist_52w']:.1f}%" if isinstance(c['dist_52w'], (int, float)) else c['dist_52w']
     print(f"""
 TICKER: {c['ticker']}
 Precio: ${c['precio']:.2f} | Cambio 7d: {c['cambio']:.2f}% | Media 50d: ${c['media']:.2f}
 RSI(14): {c['rsi']:.0f} | Volumen: {c['volumen_ratio']:.2f}x lo normal | {c['dist_minimo']:.1f}% sobre min 3m
 ATR: ${c['atr']:.2f} | Stop sugerido: ${c['sl']:.2f} | Target sugerido: ${c['tp']:.2f}
-Earnings en: {c['earnings']} | Ex-dividendo en: {c['dividendo']} | Dias como candidato: {c['dias']}""")
+Earnings en: {c['earnings']} | Ex-dividendo en: {c['dividendo']} | Dias como candidato: {c['dias']}
+Market cap: {c['market_cap']} | Sector: {c['sector']} | P/E: {c['pe']} | Dist. a max 52sem: {dist_52w_txt}""")
 print("=" * 60)
