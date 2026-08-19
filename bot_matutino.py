@@ -8,7 +8,7 @@ from datetime import date
 from email.mime.text import MIMEText
 
 # ---------- EDITA ESTO CADA MAÑANA ----------
-WATCHLIST_HOY = ["UAL", "TRMB"]
+WATCHLIST_HOY = ["BAX","AVGO","CHTR","COHR","DG","GEN","IR","TAP","ROST","NOW","SHW","TRV","TRMB","ULTA","WTW"]
 
 REMITENTE = "garysmithc010@gmail.com"
 DESTINATARIO = "garysmithc010@gmail.com"

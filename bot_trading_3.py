@@ -64,6 +64,7 @@ for ticker in tickers:
         avg_ganancia = ganancia.ewm(alpha=1/14, min_periods=14, adjust=False).mean()
         avg_perdida = perdida.ewm(alpha=1/14, min_periods=14, adjust=False).mean()
         rsi = (100 - (100 / (1 + avg_ganancia / avg_perdida))).iloc[-1]
+        volumen_ratio = df["Volume"].iloc[-1] / df["Volume"].rolling(20).mean().iloc[-1]
 
         minimo_3m = precios.tail(63).min()
         dist_minimo = ((precio_hoy - minimo_3m) / minimo_3m) * 100
@@ -95,9 +96,10 @@ for ticker in tickers:
         candidatos.append({
             "ticker": ticker, "precio": precio_hoy, "cambio": cambio, "media": media_50,
             "atr": atr, "rsi": rsi, "dist_minimo": dist_minimo,
-            "sl": precio_hoy - (2 * atr), "tp": precio_hoy + (3 * atr),
+            "sl": precio_hoy - (1 * atr), "tp": precio_hoy + (1.5 * atr),
             "earnings": dias_earnings, "dividendo": dias_dividendo,
             "dias": dias_como_candidato, "primera_vez": primera_vez,
+            "volumen_ratio": volumen_ratio,
         })
         print(f"CANDIDATO: {ticker} | ${precio_hoy:.2f} | RSI {rsi:.0f} | dia {dias_como_candidato}")
 
@@ -181,9 +183,11 @@ for i, c in enumerate(candidatos, 1):
     reporte += f"#{i}  {c['ticker']}  |  confianza {c['confianza']}\n"
     reporte += f"${c['precio']:.2f} | {c['cambio']:.2f}% en 7d | RSI {c['rsi']:.0f} | dia {c['dias']} como candidato\n"
     reporte += f"Stop ${c['sl']:.2f} | Target ${c['tp']:.2f} | ATR ${c['atr']:.2f} | {c['dist_minimo']:.1f}% sobre min 3m\n"
+    reporte += f"Volumen: {c['volumen_ratio']:.2f}x lo normal\n"
     reporte += f"Earnings en {c['earnings']} | Ex-dividendo en {c['dividendo']}\n\n"
     reporte += c["analisis"] + "\n"
     reporte += "-" * 55 + "\n\n"
+    
 
 correo = MIMEText(reporte)
 correo["Subject"] = f"Bot Trading: {len(candidatos)} candidatos - {HOY}"
